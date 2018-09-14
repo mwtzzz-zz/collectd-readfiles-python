@@ -13,9 +13,10 @@ don't exist or cannot be opened for reading are skipped without impacting the re
 This plugin was written in python to take advantage of collectd's builtin python interpreter which
 makes use of collectd's callback functions. This allows it to take advantage of collectd's caching and
 interface with the write plugins. This makes it much more efficient than using the Exec 
-plugin, which can be important the more your environment scales up. For example, [write_graphite](https://collectd.org/wiki/index.php/Plugin:Write_Graphite) 
-maintains a persistent TCP connection with carbon to minimize network overhead, something you cannot
-do with the Exec plugin.
+plugin. Such efficiency can be crucial as your environment scales up.
+For example, [write_graphite](https://collectd.org/wiki/index.php/Plugin:Write_Graphite) 
+maintains a persistent TCP connection with carbon to minimize network overhead. The python plugin
+takes advantage of this, but the Exec plugin cannot.
 
 How to use it
 -------------
