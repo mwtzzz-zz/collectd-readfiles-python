@@ -47,8 +47,8 @@ tes"
 * `DeriveMetricFiles`: one or more files that contain metrics that are of the "derive" type
 * `GaugeMetricFiles`: one or more files that contain metrics that are of the "gauge" type
 
-For information about different metric types, see: [metric types](https://docs.opnfv.org/en/stable-fraser/submodules/barometer/docs/development/requirements/02-
-and [man types.db(5)](http://linux.die.net/man/5/types.db)
+For information about different metric types, see: [metric types]
+(https://docs.opnfv.org/en/stable-fraser/submodules/barometer/docs/development/requirements/02-collectd.html) and [man types.db(5)](http://linux.die.net/man/5/types.db)
 
 Also, be aware that a setting called StoreRates for your write plugins affects the value that gets written 
 for derive and counter metrics. When StoreRates is True, a rate is calculated from subsequent 
@@ -62,6 +62,18 @@ The interval passed to dispatch() appears to have no effect. See:
 
 * [Forum discussion google](https://plus.google.com/101465842317006300704/posts/JGWAhsT3avi)
 * [Forum discussion github](https://github.com/collectd/collectd/issues/2909)
+
+The only documentation on how to write plugins for collectd seems to be the 
+[man page for collectd-python](http://linux.die.net/man/5/collectd-python). I've tried to put enough comments into the plugin to explain how it works. 
+
+In a nutshell:
+1. When you register configure_callback, it gets called once at startup and loads the config options
+from collectd.conf. Your code is responsible for handling these options, 
+assigning them to variables, and doing whatever you need with them.
+2. When you register read_callback, collectd will automatically run this function at the interval
+you specify. You must explicitly call dispatch() from within this function in order to submit metrics into collectd.
+3. dispatch() submits values into collectd, which caches them and sends them to all enabled 
+write plugins. 
 
 License
 -------
