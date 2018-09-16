@@ -2,7 +2,7 @@ collectd-readfiles-python
 ======================
 
 `collectd-readfiles-python` is a plugin for collectd that gathers metrics from file(s) you specify and 
-submits them to collectd at the interval you specify.
+submits them to collectd at the interval you specify. It uses threads for efficiency.
 
 You may specify any number of files you want to monitor. The plugin assumes the first line of the file 
 contains the value that you are interested in.
@@ -10,13 +10,20 @@ contains the value that you are interested in.
 This plugin uses threads to process the files in parallel, thereby minimizing overhead. Files that
 don't exist or cannot be opened for reading are skipped without impacting the rest of them.
 
-This plugin was written in python to take advantage of collectd's builtin python interpreter which
-makes use of collectd's callback functions. This allows it to take advantage of collectd's caching and
-interface with the write plugins. This makes it much more efficient than using the Exec 
-plugin. Such efficiency can be crucial as your environment scales up.
-For example, [write_graphite](https://collectd.org/wiki/index.php/Plugin:Write_Graphite) 
-maintains a persistent TCP connection with carbon to minimize network overhead. The python plugin
-takes advantage of this, but the Exec plugin cannot.
+This plugin was written in python to take advantage of collectd's builtin python interpreter
+(see [man collectd-python(5)](http://linux.die.net/man/5/collectd-python)), which is  **much** better
+than using the `Exec` plugin. I know the Exec plugin is easy to use, but it can easily
+cause resource exhaustion in medium-to-large environments. For example, in my own case
+we've got 2,500 Linux servers. Running an Exec plugin once a minute that submits metrics
+directly to Graphite wreaks havoc: it causes tcp exhaustion (basically a DoS on the Graphite cluster.)
+
+You want to use a python plugin instead. The collectd interpreter was designed with efficiency in mind.
+It's threaded and it makes use of collectd's callback functions, allowing your plugin to take advantage of
+collectd's batching, caching, and optimization:
+* collectd automatically calculates deltas for counter metrics. You don't have to do this in your code.
+* collectd's builtin [write_graphite plugin](https://collectd.org/wiki/index.php/Plugin:Write_Graphite) 
+automatically maintains a **single** persistent TCP connection with carbon
+to minimize network overhead. You won't flood your backend with millions of tcp connections.
 
 How to use it
 -------------
@@ -47,12 +54,12 @@ tes"
 * `DeriveMetricFiles`: one or more files that contain metrics that are of the "derive" type
 * `GaugeMetricFiles`: one or more files that contain metrics that are of the "gauge" type
 
-For information about different metric types, see: [metric types](https://docs.opnfv.org/en/stable-fraser/submodules/barometer/docs/development/requirements/02-collectd.html) and [man types.db(5)](http://linux.die.net/man/5/types.db)
+For information about different metric types, see: [metric types](https://docs.opnfv.org/en/stable-fraser/submodules/barometer/docs/development/requirements/02-collectd.html) and [man types.db(5)](http://linux.die.net/man/5/types.db). 
 
 Be aware that a setting called StoreRates for your write plugins affects the value that gets written 
-for derive and counter metrics. When StoreRates is True, a rate is calculated from subsequent 
-values of the metric. The delta is divided by the interval, so that the value that gets written is always 
-"per second." This setting does not affect gauge metrics. 
+for derive and counter metrics (but not for gauge metrics). When StoreRates is True,
+collectd automatically compares subsequent values and calculates a rate normalized to  __per second__.
+This StoreRates setting has not effect on gauge metrics. 
 
 Be aware that if you submit metrics to graphite faster than the finest granularity you 
 have specified for storage retention, 
